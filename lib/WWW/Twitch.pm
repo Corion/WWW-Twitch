@@ -5,6 +5,7 @@ no warnings 'experimental::signatures';
 
 use HTTP::Tiny;
 use JSON 'encode_json', 'decode_json';
+use POSIX 'strftime';
 
 our $VERSION = '0.01';
 
@@ -111,28 +112,35 @@ sub fetch_gql( $self, $query ) {
 
 =head2 C<< ->schedule( $channel ) >>
 
-  my $schedule = $twitch->schedule( 'somechannel' );
+  my $schedule = $twitch->schedule( 'somechannel', %options );
 
 Fetch the schedule of a channel
 
 =cut
 
-sub schedule( $self, $channel ) {
+sub schedule( $self, $channel, %options ) {
+    $options{ start_at } //= strftime '%Y-%m-%dT%H:%M:%SZ', gmtime(time);
+    $options{ end_at }   //= strftime '%Y-%m-%dT%H:%M:%SZ', gmtime(time+24*7*3600);
+    warn $options{ start_at };
+    warn $options{ end_at };
     my $res =
         $self->fetch_gql( [{"operationName" => "StreamSchedule",
                             "variables" => { "login" => $channel,
                                              "startingWeekday" => "MONDAY",
                                              "utcOffsetMinutes" => 120,
-                                             "startAt" => "2021-07-25T22:00:00.000Z",
-                                             "endAt"  => "2021-08-01T21:59:59.059Z"},
+                                             "startAt" => $options{ start_at },
+                                             "endAt"  =>  $options{ end_at }
+                                             },
                                              "extensions" => {
                                                  "persistedQuery" => {
                                                      "version" => 1,
-                                                     "sha256Hash" => "e9af1b7aa4c4eaa1655a3792147c4dd21aacd561f608e0933c3c5684d9b607a6"
+                                                     "sha256Hash" => "d495cb17a67b6f7a8842e10297e57dcd553ea17fe691db435e39a618fe4699cf"
                                                 }
                                              }
                             }]
         );
+    #use Data::Dumper;
+    #warn Dumper $res;
     return $res->[0]->{data}->{user}->{channel}->{schedule};
 };
 
