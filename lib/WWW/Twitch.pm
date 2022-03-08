@@ -6,6 +6,80 @@ no warnings 'experimental::signatures';
 use HTTP::Tiny;
 use JSON 'encode_json', 'decode_json';
 
+our $VERSION = '0.01';
+
+=head1 NAME
+
+WWW::Twitch - automate parts of Twitch without the need for an API key
+
+=head1 SYNOPSIS
+
+  use 5.012; # say
+  use WWW::Twitch;
+
+  my $channel = 'corion_de';
+  my $twitch = WWW::Twitch->new();
+  my $info = $twitch->live_stream($channel);
+  if( $info ) {
+      my $id = $info->{id};
+
+      opendir my $dh, '.'
+          or die "$!";
+
+      # If we have stale recordings, maybe our network went down
+      # in between
+      my @recordings = grep { /\b$id\.mp4(\.part)?$/ && -M $_ < 30/24/60/60 }
+                       readdir $dh;
+
+      if( ! @recordings ) {
+          say "$channel is live (Stream $id)";
+          say "Launching youtube-dl";
+          exec "youtube_dl", '-q', "https://www.twitch.tv/$channel";
+      } else {
+          say "$channel is recording (@recordings)";
+      };
+
+  } else {
+      say "$channel is offline";
+  }
+
+
+=cut
+
+=head1 METHODS
+
+=head2 C<< ->new >>
+
+  my $twitch = WWW::Twitch->new();
+
+Creates a new Twitch client
+
+=over 4
+
+=item B<device_id>
+
+Optional device id. If missing, a hardcoded
+device id will be used.
+
+=item B<client_id>
+
+Optional client id. If missing, a hardcoded
+client id will be used.
+
+=item B<client_version>
+
+Optional client version. If missing, a hardcoded
+client version will be used.
+
+=item B<ua>
+
+Optional HTTP user agent. If missing, a L<HTTP::Tiny>
+object will be constructed.
+
+=back
+
+=cut
+
 has 'device_id' => (
     is => 'ro',
     default => 'WQS1BrvLDgmo6QcdpHY7M3d4eMRjf6ji'
@@ -35,7 +109,14 @@ sub fetch_gql( $self, $query ) {
     $res = decode_json( $res->{content} );
 }
 
-# Fetch the schedule of a channel
+=head2 C<< ->schedule( $channel ) >>
+
+  my $schedule = $twitch->schedule( 'somechannel' );
+
+Fetch the schedule of a channel
+
+=cut
+
 sub schedule( $self, $channel ) {
     my $res =
         $self->fetch_gql( [{"operationName" => "StreamSchedule",
@@ -55,6 +136,16 @@ sub schedule( $self, $channel ) {
     return $res->[0]->{data}->{user}->{channel}->{schedule};
 };
 
+=head2 C<< ->is_live( $channel ) >>
+
+  if( $twitch->is_live( 'somechannel' ) ) {
+      ...
+  }
+
+Check whether a stream is currently live on a channel
+
+=cut
+
 sub is_live( $self, $channel ) {
     my $res =
         $self->fetch_gql([{"operationName" => "WithIsStreamLiveQuery",
@@ -72,9 +163,17 @@ sub is_live( $self, $channel ) {
         ]
         #"Client-Version": "9ea2055a-41f0-43b7-b295-70885b40c41c",
         );
-    use Data::Dumper;
     return $res->[0]->{data};
 }
+
+=head2 C<< ->stream_playback_access_token( $channel ) >>
+
+  my $tok = $twitch->stream_playback_access_token( 'somechannel' );
+  say $tok->{channel_id};
+
+Internal method to fetch the stream playback access token
+
+=cut
 
 sub stream_playback_access_token( $self, $channel ) {
     my $res =
@@ -84,6 +183,14 @@ sub stream_playback_access_token( $self, $channel ) {
         ]);
     return decode_json( $res->[0]->{data}->{streamPlaybackAccessToken}->{value} );
 };
+
+=head2 C<< ->live_stream( $channel ) >>
+
+  my $tok = $twitch->live_stream( 'somechannel' );
+
+Internal method to fetch information about a stream on a channel
+
+=cut
 
 sub live_stream( $self, $channel ) {
     my $id = $self->stream_playback_access_token( $channel )->{channel_id};
