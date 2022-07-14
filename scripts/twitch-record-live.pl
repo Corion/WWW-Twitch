@@ -39,12 +39,12 @@ if( $info ) {
 
     # If we have stale recordings, maybe our network went down
     # in between
-    my @recordings = grep { /\b$id\.mp4(\.part)?$/ && -M $_ < 30/24/60/60 }
+    my @recordings = grep { /\b$id\b.*\.mp4(\.part)?$/ && -M $_ < 30/24/60/60 }
                      readdir $dh;
 
     if( ! @recordings ) {
         info( "$channel is live (Stream $id)");
-        info( "Launching youtube-dl in $stream_dir" );
+        info( "Launching $youtube_dl in $stream_dir" );
         chdir $stream_dir;
         exec $youtube_dl, '-q', "https://www.twitch.tv/$channel";
     } else {
