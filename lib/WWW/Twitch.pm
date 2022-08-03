@@ -131,12 +131,12 @@ sub schedule( $self, $channel, %options ) {
                                              "startAt" => $options{ start_at },
                                              "endAt"  =>  $options{ end_at }
                                              },
-                                             "extensions" => {
-                                                 "persistedQuery" => {
-                                                     "version" => 1,
-                                                     "sha256Hash" => "d495cb17a67b6f7a8842e10297e57dcd553ea17fe691db435e39a618fe4699cf"
-                                                }
-                                             }
+                             "extensions" => {
+                                 "persistedQuery" => {
+                                    "version" => 1,
+                                    "sha256Hash" => "d495cb17a67b6f7a8842e10297e57dcd553ea17fe691db435e39a618fe4699cf"
+                                 }
+                             }
                             }]
         );
     #use Data::Dumper;
@@ -157,8 +157,7 @@ Check whether a stream is currently live on a channel
 sub is_live( $self, $channel ) {
     my $res =
         $self->fetch_gql([{"operationName" => "WithIsStreamLiveQuery",
-                           "variables" => {"id" => "50985620"},
-                                           "extensions" => {
+                            "extensions" => {
                                                 "persistedQuery" => {
                                                     "version" => 1,
                                                     "sha256Hash" => "04e46329a6786ff3a81c01c50bfa5d725902507a0deb83b0edbf7abe7a3716ea"
