@@ -6,6 +6,7 @@ no warnings 'experimental::signatures';
 use WWW::Twitch;
 use Getopt::Long;
 use Pod::Usage;
+use POSIX 'strftime';
 
 GetOptions(
     'directory|d=s' => \my $stream_dir,
@@ -39,8 +40,11 @@ if( $info ) {
 
     # If we have stale recordings, maybe our network went down
     # in between
-    my @recordings = grep { /\b$id\b.*\.mp4(\.part)?$/ && -M $_ < 30/24/60/60 }
+    my $one_minute = 24/60/60;
+    my @recordings = grep { /\b$id\b.*\.mp4(\.part)?$/ && -M $_ < $one_minute }
                      readdir $dh;
+
+    @recordings = map { sprintf "%s (%s)", $_, strftime('%H:%M:%S', localtime(-M $_ * 24*60*60 ))} @recordings;
 
     if( ! @recordings ) {
         info( "$channel is live (Stream $id)");
