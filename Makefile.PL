@@ -53,6 +53,7 @@ my %module = (
         'HTTP::Tiny'         => 0,
         'Text::Table'        => 0,
         'JSON'               => 0,
+        'YAML'               => 0,
         'Getopt::Long'       => 0,
         'Pod::Usage'         => 0,
         'Moo'                => 2, # for some hashes-as-objects
