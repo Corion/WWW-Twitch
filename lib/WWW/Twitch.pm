@@ -107,7 +107,11 @@ sub fetch_gql( $self, $query ) {
             "Client-ID" => $self->client_id,
         },
     });
-    $res = decode_json( $res->{content} );
+    if( $res->{content}) {
+        $res = decode_json( $res->{content} );
+    } else {
+        return
+    }
 }
 
 =head2 C<< ->schedule( $channel ) >>
@@ -170,7 +174,11 @@ sub is_live( $self, $channel ) {
         ]
         #"Client-Version": "9ea2055a-41f0-43b7-b295-70885b40c41c",
         );
-    return $res->[0]->{data};
+    if( $res ) {
+        return $res->[0]->{data};
+    } else {
+        return
+    }
 }
 
 =head2 C<< ->stream_playback_access_token( $channel ) >>
@@ -207,7 +215,11 @@ sub live_stream( $self, $channel ) {
         "extensions" => {"persistedQuery" => {"version" => 1,"sha256Hash" => "04e46329a6786ff3a81c01c50bfa5d725902507a0deb83b0edbf7abe7a3716ea"}}},
     ]);
 
-    return $res->[0]->{data}->{user}->{stream};
+    if( $res ) {
+        return $res->[0]->{data}->{user}->{stream};
+    } else {
+        return
+    }
 }
 
 #curl 'https://gql.twitch.tv/gql#origin=twilight'
