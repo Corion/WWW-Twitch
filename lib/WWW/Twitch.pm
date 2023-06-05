@@ -196,7 +196,11 @@ sub stream_playback_access_token( $self, $channel ) {
             "query" => 'query PlaybackAccessToken_Template($login: String!, $isLive: Boolean!, $vodID: ID!, $isVod: Boolean!, $playerType: String!) {  streamPlaybackAccessToken(channelName: $login, params: {platform: "web", playerBackend: "mediaplayer", playerType: $playerType}) @include(if: $isLive) {    value    signature    __typename  }  videoPlaybackAccessToken(id: $vodID, params: {platform: "web", playerBackend: "mediaplayer", playerType: $playerType}) @include(if: $isVod) {    value    signature    __typename  }}',
             "variables" => {"isLive" => $JSON::true,"login" => "$channel","isVod" => $JSON::false,"vodID" => "","playerType" => "site"}},
         ]);
-    return decode_json( $res->[0]->{data}->{streamPlaybackAccessToken}->{value} );
+    if ( $res ) {
+        return decode_json( $res->[0]->{data}->{streamPlaybackAccessToken}->{value} );
+    } else {
+        return
+    }
 };
 
 =head2 C<< ->live_stream( $channel ) >>
@@ -208,12 +212,16 @@ Internal method to fetch information about a stream on a channel
 =cut
 
 sub live_stream( $self, $channel ) {
-    my $id = $self->stream_playback_access_token( $channel )->{channel_id};
-    my $res =
-        $self->fetch_gql(
-    [{"operationName" => "WithIsStreamLiveQuery","variables" => {"id" => "$id"},
-        "extensions" => {"persistedQuery" => {"version" => 1,"sha256Hash" => "04e46329a6786ff3a81c01c50bfa5d725902507a0deb83b0edbf7abe7a3716ea"}}},
-    ]);
+    my $id = $self->stream_playback_access_token( $channel );
+    my $res;
+    if( $id ) {
+        $id = $id->{channel_id};
+        my $res =
+            $self->fetch_gql(
+        [{"operationName" => "WithIsStreamLiveQuery","variables" => {"id" => "$id"},
+            "extensions" => {"persistedQuery" => {"version" => 1,"sha256Hash" => "04e46329a6786ff3a81c01c50bfa5d725902507a0deb83b0edbf7abe7a3716ea"}}},
+        ]);
+    };
 
     if( $res ) {
         return $res->[0]->{data}->{user}->{stream};
