@@ -38,8 +38,7 @@ sub info( $msg ) {
 }
 
 sub get_channel_live_info( $channel ) {
-    state $info;
-    $info //= $twitch->live_stream($channel);
+    state $info = $twitch->live_stream($channel);
     return $info
 }
 
@@ -70,7 +69,7 @@ if( ! -d $stream_dir ) {
 my $stale = $maximum_stale_seconds / (24*60*60);
 
 # Wait for a file to be updated
-my @current = grep { -M $_ < $stale }
+my @current = grep { -M "$stream_dir/$_" < $stale }
               stream_recordings( $stream_dir, $channel );
 
 # If we have a recent file, we are obviously still recording, no
@@ -83,7 +82,10 @@ if( ! @current ) {
         info( "$channel is live (Stream $id)");
         info( "Launching $youtube_dl in $stream_dir" );
         chdir $stream_dir;
-        exec $youtube_dl, '-q', "https://www.twitch.tv/$channel";
+        exec $youtube_dl,
+            '-f', 'bestvideo[height<=480]+bestaudio/best[height<=480]',
+            '-q', "https://www.twitch.tv/$channel",
+            ;
     } else {
         info( "$channel is offline" );
     }
