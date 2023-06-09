@@ -216,7 +216,7 @@ sub live_stream( $self, $channel ) {
     my $res;
     if( $id ) {
         $id = $id->{channel_id};
-        my $res =
+        $res =
             $self->fetch_gql(
         [{"operationName" => "WithIsStreamLiveQuery","variables" => {"id" => "$id"},
             "extensions" => {"persistedQuery" => {"version" => 1,"sha256Hash" => "04e46329a6786ff3a81c01c50bfa5d725902507a0deb83b0edbf7abe7a3716ea"}}},
