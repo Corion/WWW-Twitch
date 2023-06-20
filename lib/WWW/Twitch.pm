@@ -193,6 +193,9 @@ Internal method to fetch the stream playback access token
 =cut
 
 sub stream_playback_access_token( $self, $channel ) {
+    my $retries = 10;
+    my $error;
+    while( $retries -->0 ) {
     my $res =
         $self->fetch_gql([{"operationName" => "PlaybackAccessToken_Template",
             "query" => 'query PlaybackAccessToken_Template($login: String!, $isLive: Boolean!, $vodID: ID!, $isVod: Boolean!, $playerType: String!) {  streamPlaybackAccessToken(channelName: $login, params: {platform: "web", playerBackend: "mediaplayer", playerType: $playerType}) @include(if: $isLive) {    value    signature    __typename  }  videoPlaybackAccessToken(id: $vodID, params: {platform: "web", playerBackend: "mediaplayer", playerType: $playerType}) @include(if: $isVod) {    value    signature    __typename  }}',
@@ -201,13 +204,12 @@ sub stream_playback_access_token( $self, $channel ) {
     if ( $res ) {
         if( my $v = $res->[0]->{data}->{streamPlaybackAccessToken}->{value} ) {
             return decode_json( $v )
-        };
-        require Data::Dumper;
-        warn Data::Dumper::Dumper( $res );
-        croak "... here";
-    } else {
-        return
+        } elsif( $error = $res->{errors} ) {
+            # ...
+        }
     }
+    }
+    croak $error
 };
 
 =head2 C<< ->live_stream( $channel ) >>
