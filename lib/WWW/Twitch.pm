@@ -3,6 +3,8 @@ use Moo 2;
 use feature 'signatures';
 no warnings 'experimental::signatures';
 
+use Carp 'croak';
+
 use HTTP::Tiny;
 use JSON 'encode_json', 'decode_json';
 use POSIX 'strftime';
