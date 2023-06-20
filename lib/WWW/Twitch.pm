@@ -197,7 +197,12 @@ sub stream_playback_access_token( $self, $channel ) {
             "variables" => {"isLive" => $JSON::true,"login" => "$channel","isVod" => $JSON::false,"vodID" => "","playerType" => "site"}},
         ]);
     if ( $res ) {
-        return decode_json( $res->[0]->{data}->{streamPlaybackAccessToken}->{value} );
+        if( my $v = $res->[0]->{data}->{streamPlaybackAccessToken}->{value} ) {
+            return decode_json( $v )
+        };
+        require Data::Dumper;
+        warn Data::Dumper::Dumper( $res );
+        croak "... here";
     } else {
         return
     }
