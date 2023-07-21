@@ -9,7 +9,7 @@ use HTTP::Tiny;
 use JSON 'encode_json', 'decode_json';
 use POSIX 'strftime';
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 NAME
 
