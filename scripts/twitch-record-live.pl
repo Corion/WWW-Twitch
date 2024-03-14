@@ -83,7 +83,7 @@ if( ! @current ) {
         info( "Launching $youtube_dl in $stream_dir" );
         chdir $stream_dir;
         exec $youtube_dl,
-            '-f', 'bestvideo[height<=480]+bestaudio/best[height<=480]',
+            '-f', 'bestvideo[height<=480]+bestaudio/best[height<=480]/bestvideo[height<=720]/bestvideo',
             '-q', "https://www.twitch.tv/$channel",
             ;
     } else {
