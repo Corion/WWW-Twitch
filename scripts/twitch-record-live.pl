@@ -15,6 +15,7 @@ GetOptions(
     'max-stale|s=s' => \my $maximum_stale_seconds,
     'channel-id|i=s' => \my $channel_id,
     'config|f=s' => \my $config,
+    'n|dry-run'      => \my $dry_run,
 ) or pod2usage(2);
 
 $stream_dir //= '.';
@@ -81,6 +82,7 @@ sub check_channel( $channel ) {
             info( "$channel is live (Stream $id)");
             info( "Launching $youtube_dl in $stream_dir" );
 
+            if( ! $dry_run ) {
                 chdir $stream_dir;
                 # Ugh, we can't do exec() if we have multiple streams ...
                 if( my $pid = fork ) {
@@ -93,6 +95,7 @@ sub check_channel( $channel ) {
                         ;
                     die "Couldn't launch $youtube_dl: $!";
                 };
+            };
         } else {
             info( "$channel is offline" );
         }
