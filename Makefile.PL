@@ -50,6 +50,7 @@ my %module = (
     },
 
     PREREQ_PM => {
+        'experimental'       => '0.031',
         'HTTP::Tiny'         => 0,
         'Text::Table'        => 0,
         'JSON'               => 0,

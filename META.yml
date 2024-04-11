@@ -26,6 +26,7 @@ requires:
   Pod::Usage: '0'
   Text::Table: '0'
   YAML: '0'
+  experimental: '0.031'
   perl: '5.020'
 resources:
   bugtracker: https://github.com/Corion/WWW-Twitch/issues

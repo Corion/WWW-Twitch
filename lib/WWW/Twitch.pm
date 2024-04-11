@@ -1,7 +1,7 @@
 package WWW::Twitch;
+use 5.020;
 use Moo 2;
-use feature 'signatures';
-no warnings 'experimental::signatures';
+use experimental::signatures;
 
 use Carp 'croak';
 
