@@ -36,9 +36,9 @@ sub info( $msg ) {
     }
 }
 
+my %info;
 sub get_channel_live_info( $channel ) {
-    state $info = $twitch->live_stream($channel);
-    return $info
+    return $info{ $channel } //= $twitch->live_stream($channel);
 }
 
 sub get_channel_id( $channel ) {
