@@ -1,13 +1,14 @@
 package WWW::Twitch;
 use 5.020;
 use Moo 2;
-use experimental::signatures;
+use experimental 'signatures';
 
 use Carp 'croak';
 
-use HTTP::Tiny;
 use JSON 'encode_json', 'decode_json';
 use POSIX 'strftime';
+use IO::Async;
+use Future::HTTP;
 
 our $VERSION = '0.02';
 
@@ -45,7 +46,6 @@ WWW::Twitch - automate parts of Twitch without the need for an API key
   } else {
       say "$channel is offline";
   }
-
 
 =cut
 
@@ -98,22 +98,31 @@ has 'client_version' => (
 has 'ua' =>
     is => 'lazy',
     default => sub {
-    HTTP::Tiny->new( verify_SSL => 1 ),
+    #Future::HTTP->new( verify_SSL => 1 ),
+    Future::HTTP->new(),
 };
 
-sub fetch_gql( $self, $query ) {
-    my $res = $self->ua->post( 'https://gql.twitch.tv/gql', {
-        content => encode_json( $query ),
+sub fetch_gql_f( $self, $query ) {
+    my $f = $self->ua->http_request( POST => 'https://gql.twitch.tv/gql',
+        body => encode_json( $query ),
         headers => {
             # so far we need no headers
             "Client-ID" => $self->client_id,
         },
+    )->then(sub( $body, $headers ) {
+        my $res;
+        if( $body ) {
+            $res = decode_json( $body );
+        } else {
+            return Future->done()
+        }
+        return Future->done($res)
     });
-    if( $res->{content}) {
-        $res = decode_json( $res->{content} );
-    } else {
-        return
-    }
+    return $f
+}
+
+sub fetch_gql( $self, $query ) {
+    $self->fetch_gql_f( $query )->get
 }
 
 =head2 C<< ->schedule( $channel ) >>
@@ -160,9 +169,9 @@ Check whether a stream is currently live on a channel
 
 =cut
 
-sub is_live( $self, $channel ) {
-    my $res =
-        $self->fetch_gql([{"operationName" => "WithIsStreamLiveQuery",
+sub is_live_f( $self, $channel ) {
+    my $f =
+        $self->fetch_gql_f([{"operationName" => "WithIsStreamLiveQuery",
                             "extensions" => {
                                                 "persistedQuery" => {
                                                     "version" => 1,
@@ -175,12 +184,19 @@ sub is_live( $self, $channel ) {
                             #    "extensions" => {"persistedQuery" => {"version" => 1,"sha256Hash" => "d37a38ac165e9a15c26cd631d70070ee4339d48ff4975053e622b918ce638e0f"}}}
         ]
         #"Client-Version": "9ea2055a-41f0-43b7-b295-70885b40c41c",
-        );
-    if( $res ) {
-        return $res->[0]->{data};
-    } else {
-        return
-    }
+        )
+    ->then(sub($res) {
+        if( $res ) {
+            return Future->done( $res->[0]->{data} );
+        } else {
+            return Future->done()
+        }
+    });
+    return $f
+}
+
+sub is_live( $self, $channel ) {
+    return $self->is_live_f($channel)->get
 }
 
 =head2 C<< ->stream_playback_access_token( $channel ) >>
@@ -196,18 +212,18 @@ sub stream_playback_access_token( $self, $channel ) {
     my $retries = 10;
     my $error;
     while( $retries -->0 ) {
-    my $res =
-        $self->fetch_gql([{"operationName" => "PlaybackAccessToken_Template",
-            "query" => 'query PlaybackAccessToken_Template($login: String!, $isLive: Boolean!, $vodID: ID!, $isVod: Boolean!, $playerType: String!) {  streamPlaybackAccessToken(channelName: $login, params: {platform: "web", playerBackend: "mediaplayer", playerType: $playerType}) @include(if: $isLive) {    value    signature    __typename  }  videoPlaybackAccessToken(id: $vodID, params: {platform: "web", playerBackend: "mediaplayer", playerType: $playerType}) @include(if: $isVod) {    value    signature    __typename  }}',
-            "variables" => {"isLive" => $JSON::true,"login" => "$channel","isVod" => $JSON::false,"vodID" => "","playerType" => "site"}},
-        ]);
-    if ( $res ) {
-        if( my $v = $res->[0]->{data}->{streamPlaybackAccessToken}->{value} ) {
-            return decode_json( $v )
-        } elsif( $error = $res->{errors} ) {
-            # ...
+        my $res =
+            $self->fetch_gql([{"operationName" => "PlaybackAccessToken_Template",
+                "query" => 'query PlaybackAccessToken_Template($login: String!, $isLive: Boolean!, $vodID: ID!, $isVod: Boolean!, $playerType: String!) {  streamPlaybackAccessToken(channelName: $login, params: {platform: "web", playerBackend: "mediaplayer", playerType: $playerType}) @include(if: $isLive) {    value    signature    __typename  }  videoPlaybackAccessToken(id: $vodID, params: {platform: "web", playerBackend: "mediaplayer", playerType: $playerType}) @include(if: $isVod) {    value    signature    __typename  }}',
+                "variables" => {"isLive" => $JSON::true,"login" => "$channel","isVod" => $JSON::false,"vodID" => "","playerType" => "site"}},
+            ]);
+        if ( $res ) {
+            if( my $v = $res->[0]->{data}->{streamPlaybackAccessToken}->{value} ) {
+                return decode_json( $v )
+            } elsif( $error = $res->{errors} ) {
+                # ...
+            }
         }
-    }
     }
     croak $error
 };
@@ -256,5 +272,27 @@ sub live_stream( $self, $channel ) {
 #    -H 'Sec-Fetch-Mode: cors'
 #    -H 'Sec-Fetch-Site: same-site'
 #    --data-raw '[{"operationName":"StreamSchedule","variables":{"login":"bootiemashup","startingWeekday":"MONDAY","utcOffsetMinutes":120,"startAt":"2021-07-25T22:00:00.000Z","endAt":"2021-08-01T21:59:59.059Z"},"extensions":{"persistedQuery":{"version":1,"sha256Hash":"e9af1b7aa4c4eaa1655a3792147c4dd21aacd561f608e0933c3c5684d9b607a6"}}}]'
+
+=head2 C<< ->stream_status( $channel ) >>
+
+  my $status = $twitch->stream_status_f( 'somechannel', 'another_channel' );
+  for my $channel ($status->get) {
+      say $status->{channel}, $status->{status};
+  }
+
+Fetches the status of multiple channels
+
+=cut
+
+sub stream_status_f( $self, @channels ) {
+    fmap_scalar(sub($channel) {
+        return { channel => $channel, status => $self->is_live_f( $channel ) }
+    })
+}
+
+sub stream_status( $self, @channels ) {
+    $self->stream_status_f(@channels)
+    ->get
+}
 
 1;
