@@ -32,8 +32,9 @@
       },
       "runtime" : {
          "requires" : {
+            "Future::AsyncAwait" : "0",
+            "Future::HTTP" : "0.17",
             "Getopt::Long" : "0",
-            "HTTP::Tiny" : "0",
             "JSON" : "0",
             "Moo" : "2",
             "Pod::Usage" : "0",

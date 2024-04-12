@@ -51,13 +51,14 @@ my %module = (
 
     PREREQ_PM => {
         'experimental'       => '0.031',
-        'HTTP::Tiny'         => 0,
+        'Future::HTTP'       => 0.17,
         'Text::Table'        => 0,
         'JSON'               => 0,
         'YAML'               => 0,
         'Getopt::Long'       => 0,
         'Pod::Usage'         => 0,
         'Moo'                => 2, # for some hashes-as-objects
+        'Future::AsyncAwait' => 0, # for convenience
     },
     TEST_REQUIRES => {
         'Test::More'   => 0,

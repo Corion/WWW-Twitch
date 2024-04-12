@@ -7,7 +7,7 @@ use Carp 'croak';
 
 use JSON 'encode_json', 'decode_json';
 use POSIX 'strftime';
-use IO::Async;
+use Future::Utils 'repeat';
 use Future::HTTP;
 
 our $VERSION = '0.02';
@@ -208,25 +208,42 @@ Internal method to fetch the stream playback access token
 
 =cut
 
-sub stream_playback_access_token( $self, $channel ) {
-    my $retries = 10;
+sub stream_playback_access_token_f( $self, $channel, %options ) {
+    my $retries = $options{ retries } // 10;
+    my $sleep   = $options{ sleep } // 1;
     my $error;
-    while( $retries -->0 ) {
-        my $res =
-            $self->fetch_gql([{"operationName" => "PlaybackAccessToken_Template",
+    my $res = repeat {
+        my $r =
+            $self->fetch_gql_f([{"operationName" => "PlaybackAccessToken_Template",
                 "query" => 'query PlaybackAccessToken_Template($login: String!, $isLive: Boolean!, $vodID: ID!, $isVod: Boolean!, $playerType: String!) {  streamPlaybackAccessToken(channelName: $login, params: {platform: "web", playerBackend: "mediaplayer", playerType: $playerType}) @include(if: $isLive) {    value    signature    __typename  }  videoPlaybackAccessToken(id: $vodID, params: {platform: "web", playerBackend: "mediaplayer", playerType: $playerType}) @include(if: $isVod) {    value    signature    __typename  }}',
                 "variables" => {"isLive" => $JSON::true,"login" => "$channel","isVod" => $JSON::false,"vodID" => "","playerType" => "site"}},
             ]);
+        return $r
+    } while => sub( $c ) {
+        # Should we offer a retry callback?!
+        !$c->get and $retries --> 0
+    };
+    return $res->then( sub( $res ) {
+
         if ( $res ) {
             if( my $v = $res->[0]->{data}->{streamPlaybackAccessToken}->{value} ) {
-                return decode_json( $v )
+                return Future->done( decode_json( $v ))
             } elsif( $error = $res->{errors} ) {
                 # ...
+                return Future->fail( $error );
+            } else {
+                return Future->done
             }
         }
-    }
-    croak $error
+    })->catch(sub(@err) {
+        use Data::Dumper;
+        warn Dumper \@err;
+    });
 };
+
+sub stream_playback_access_token( $self, $channel, %options ) {
+    $self->stream_playback_access_token_f( $channel, %options )->get()
+}
 
 =head2 C<< ->live_stream( $channel ) >>
 
@@ -236,23 +253,31 @@ Internal method to fetch information about a stream on a channel
 
 =cut
 
-sub live_stream( $self, $channel ) {
-    my $id = $self->stream_playback_access_token( $channel );
-    my $res;
-    if( $id ) {
-        $id = $id->{channel_id};
-        $res =
-            $self->fetch_gql(
-        [{"operationName" => "WithIsStreamLiveQuery","variables" => {"id" => "$id"},
-            "extensions" => {"persistedQuery" => {"version" => 1,"sha256Hash" => "04e46329a6786ff3a81c01c50bfa5d725902507a0deb83b0edbf7abe7a3716ea"}}},
-        ]);
-    };
+sub live_stream_f( $self, $channel ) {
+    my $res = $self->stream_playback_access_token_f( $channel )->then(sub( $id ) {
+        if( $id ) {
+            $id = $id->{channel_id};
+            return $self->fetch_gql_f(
+            [{"operationName" => "WithIsStreamLiveQuery","variables" => {"id" => "$id"},
+                "extensions" => {"persistedQuery" => {"version" => 1,"sha256Hash" => "04e46329a6786ff3a81c01c50bfa5d725902507a0deb83b0edbf7abe7a3716ea"}}},
+            ])->then(sub( $res ) {
+                if( $res ) {
+                    return Future->done( $res->[0]->{data}->{user}->{stream});
+                } else {
+                    return Future->done
+                }
+            })
+        } else {
+            return Future->done
+        }
 
-    if( $res ) {
-        return $res->[0]->{data}->{user}->{stream};
-    } else {
-        return
-    }
+    #})->on_ready(sub($s) {
+    #    say "<$channel> Live info ready";
+    });
+}
+
+sub live_stream( $self, $channel ) {
+    return $self->live_stream_f( $channel )->get();
 }
 
 #curl 'https://gql.twitch.tv/gql#origin=twilight'
