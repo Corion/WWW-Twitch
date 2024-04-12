@@ -28,7 +28,6 @@ if( -f $config ) {
 }
 
 my $twitch = WWW::Twitch->new();
-my $channel = $ARGV[0];
 
 sub info( $msg ) {
     if( ! $quiet ) {
@@ -50,8 +49,8 @@ sub get_channel_id( $channel ) {
            }
 }
 
-sub stream_recordings( $directory, $streamname=$channel ) {
-    my $id = get_channel_id( $channel );
+sub stream_recordings( $directory, $streamname ) {
+    my $id = get_channel_id( $streamname );
     opendir my $dh, $stream_dir
         or die "$stream_dir: $!";
 
@@ -67,27 +66,41 @@ if( ! -d $stream_dir ) {
 # in between
 my $stale = $maximum_stale_seconds / (24*60*60);
 
-# Wait for a file to be updated
-my @current = grep { -M "$stream_dir/$_" < $stale }
-              stream_recordings( $stream_dir, $channel );
+sub check_channel( $channel ) {
+    # Wait for a file to be updated
+    my @current = grep { -M "$stream_dir/$_" < $stale }
+                stream_recordings( $stream_dir, $channel );
 
-# If we have a recent file, we are obviously still recording, no
-# need to hit Twitch
-if( ! @current ) {
-    # Check whether the channel is live
-    my $info = get_channel_live_info($channel);
-    if( $info ) {
-        my $id = $info->{id};
-        info( "$channel is live (Stream $id)");
-        info( "Launching $youtube_dl in $stream_dir" );
-        chdir $stream_dir;
-        exec $youtube_dl,
-            '-f', 'bestvideo[height<=480]+bestaudio/best[height<=480]/bestvideo[height<=720]/bestvideo',
-            '-q', "https://www.twitch.tv/$channel",
-            ;
+    # If we have a recent file, we are obviously still recording, no
+    # need to hit Twitch
+    if( ! @current ) {
+        # Check whether the channel is live
+        my $info = get_channel_live_info($channel);
+        if( $info ) {
+            my $id = $info->{id};
+            info( "$channel is live (Stream $id)");
+            info( "Launching $youtube_dl in $stream_dir" );
+
+                chdir $stream_dir;
+                # Ugh, we can't do exec() if we have multiple streams ...
+                if( my $pid = fork ) {
+                    info("Download started as pid $pid");
+                    return;
+                } else {
+                    exec $youtube_dl,
+                        '-f', 'bestvideo[height<=480]+bestaudio/best[height<=480]/bestvideo[height<=720]/bestvideo',
+                        '-q', "https://www.twitch.tv/$channel",
+                        ;
+                    die "Couldn't launch $youtube_dl: $!";
+                };
+        } else {
+            info( "$channel is offline" );
+        }
     } else {
-        info( "$channel is offline" );
-    }
-} else {
-    info( "$channel is recording (@current)" );
-};
+        info( "$channel is recording (@current)" );
+    };
+}
+
+for my $channel (@ARGV) {
+    check_channel( $channel );
+}
