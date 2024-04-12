@@ -93,7 +93,6 @@ async sub check_channel( $channel ) {
         my $id = $info->{id};
         return { channel => $channel, id => $id, status => 'live' };
     } else {
-        #info( "$channel is offline" );
         return { channel => $channel, id => undef, status => undef };
     }
 };
