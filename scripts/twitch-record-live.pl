@@ -67,7 +67,7 @@ async sub stream_recordings( $directory, $streamname ) {
         or die "$stream_dir: $!";
     my @recordings;
     if( $id ) {
-        @recordings = grep { /\b$id\b.*\.mp4(\.part)?$/ }
+        @recordings = grep { /\b$id\b.*\.mp4(\.part)?\z/ }
                      readdir $dh;
     };
     return @recordings
