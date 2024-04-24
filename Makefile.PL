@@ -59,6 +59,8 @@ my %module = (
         'Pod::Usage'         => 0,
         'Moo'                => 2, # for some hashes-as-objects
         'Future::AsyncAwait' => 0, # for convenience
+        'Future::Utils'      => 0,
+        'IO::Async'          => 0, # well, any kind of event loop does
     },
     TEST_REQUIRES => {
         'Test::More'   => 0,

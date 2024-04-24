@@ -34,7 +34,9 @@
          "requires" : {
             "Future::AsyncAwait" : "0",
             "Future::HTTP" : "0.17",
+            "Future::Utils" : "0",
             "Getopt::Long" : "0",
+            "IO::Async" : "0",
             "JSON" : "0",
             "Moo" : "2",
             "Pod::Usage" : "0",
@@ -64,7 +66,7 @@
          "web" : "https://github.com/Corion/WWW-Twitch"
       }
    },
-   "version" : "0.02",
+   "version" : "0.03",
    "x_serialization_backend" : "JSON::PP version 4.07",
    "x_static_install" : 1
 }

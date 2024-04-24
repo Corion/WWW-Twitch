@@ -21,7 +21,9 @@ no_index:
 requires:
   Future::AsyncAwait: '0'
   Future::HTTP: '0.17'
+  Future::Utils: '0'
   Getopt::Long: '0'
+  IO::Async: '0'
   JSON: '0'
   Moo: '2'
   Pod::Usage: '0'
@@ -33,6 +35,6 @@ resources:
   bugtracker: https://github.com/Corion/WWW-Twitch/issues
   license: https://dev.perl.org/licenses/
   repository: git://github.com/Corion/WWW-Twitch.git
-version: '0.02'
+version: '0.03'
 x_serialization_backend: 'CPAN::Meta::YAML version 0.018'
 x_static_install: 1

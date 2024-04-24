@@ -10,7 +10,7 @@ use POSIX 'strftime';
 use Future::Utils 'repeat';
 use Future::HTTP;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 NAME
 
