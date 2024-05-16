@@ -12,6 +12,58 @@ use Future::AsyncAwait;
 use Text::Table;
 use Future::Utils 'fmap_scalar';
 
+=head1 NAME
+
+twitch-record-live.pl - record live Twitch streams
+
+=head1 SYNOPSIS
+
+  twitch-record-live.pl [options] [channel ...]
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<--directory, -d>
+
+Set the output directory for downloading streams
+
+=item B<--dl>
+
+Set the program to use for downloading
+
+Default is C<yt-dlp>
+
+=item B<--quiet, -q>
+
+Don't output anything except in case of errors
+
+=item B<--dry-run, -n>
+
+Do a dry run, don't start a download. This outputs a table with the
+live/recording/offline status of the channels.
+
+=item B<--json>
+
+Output the status as JSON structure
+
+This implies C<--dry-run>.
+
+=item B<--max-stale, -s>
+
+Maximum age of last change to a file in seconds until it is considered stale
+
+=item B<--channel-id, -i>
+
+Numeric id of a channel
+
+Specifying this saves one lookup from name to channel id. This currently only
+supports a single channel.
+
+=back
+
+=cut
+
 GetOptions(
     'directory|d=s' => \my $stream_dir,
     'dl=s' => \my $youtube_dl,
@@ -20,6 +72,7 @@ GetOptions(
     'channel-id|i=s' => \my $channel_id,
     'config|f=s' => \my $config,
     'n|dry-run'      => \my $dry_run,
+    'json'           => \my $output_json,
 ) or pod2usage(2);
 
 $stream_dir //= '.';
@@ -31,6 +84,7 @@ if( -f $config ) {
 } else {
     $config = {}
 }
+$dry_run //= $output_json;
 
 my $twitch = WWW::Twitch->new();
 
@@ -128,9 +182,14 @@ sub check_channels( @channels ) {
 };
 
 my @channels = check_channels( @ARGV );
-my $t = Text::Table->new("Channel", "Status");
-$t->load( map { [ $_->{channel}, $_->{status} // 'offline' ]} @channels );
-info( $t );
+my $info = map { [ $_->{channel}, $_->{status} // 'offline' ]} @channels;
+if( $output_json) {
+    info( encode_json( $info ));
+} else {
+    my $t = Text::Table->new("Channel", "Status");
+    $t->load(  );
+    info( $t );
+}
 
 for my $channel (@channels) {
     if( $channel->{status} eq 'live' ) {
