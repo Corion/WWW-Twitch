@@ -133,13 +133,11 @@ Fetch the schedule of a channel
 
 =cut
 
-sub schedule( $self, $channel, %options ) {
+sub schedule_f( $self, $channel, %options ) {
     $options{ start_at } //= strftime '%Y-%m-%dT%H:%M:%SZ', gmtime(time);
     $options{ end_at }   //= strftime '%Y-%m-%dT%H:%M:%SZ', gmtime(time+24*7*3600);
-    warn $options{ start_at };
-    warn $options{ end_at };
     my $res =
-        $self->fetch_gql( [{"operationName" => "StreamSchedule",
+        $self->fetch_gql_f( [{"operationName" => "StreamSchedule",
                             "variables" => { "login" => $channel,
                                              "startingWeekday" => "MONDAY",
                                              "utcOffsetMinutes" => 120,
@@ -153,11 +151,16 @@ sub schedule( $self, $channel, %options ) {
                                  }
                              }
                             }]
-        );
-    #use Data::Dumper;
-    #warn Dumper $res;
-    return $res->[0]->{data}->{user}->{channel}->{schedule};
+        )
+    ->then( sub( $res ) {
+        return Future->done( $res->[0]->{data}->{user}->{channel}->{schedule});
+    });
+    return $res
 };
+
+sub schedule ( $self, $channel, %options ) {
+    return $self->schedule_f( $channel, %options )->get;
+}
 
 =head2 C<< ->is_live( $channel ) >>
 
