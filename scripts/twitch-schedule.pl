@@ -10,20 +10,24 @@ my $twitch = WWW::Twitch->new();
 
 my @out;
 
-#my $channel = 'twitchfarming';
-my $channel = 'bootiemashup';
+for my $channel (@ARGV) {
+    my $s = $twitch->schedule($channel);
+    if( ! $s ) {
+        say "No schedule for $channel";
+    };
 
-my $s = $twitch->schedule($channel);
-if( ! $s ) {
-    say "No schedule for $channel";
-};
+    for my $entry ( @{ $s->{segments} } ) {
+        $entry->{channel} = $channel;
+        push @out, $entry;
+    };
+}
 
-for my $entry ( @{ $s->{segments} } ) {
-    push @out, [ $entry->{title}, $entry->{startAt}, $entry->{endAt} ];
-    #use Data::Dumper;
-    #say Dumper $entry;
-};
+@out = map {[ $_->{channel}, $_->{title}, $_->{startAt}, $_->{endAt} ]}
+       sort {  $a->{startAt} cmp $b->{startAt}
+            || $a->{endAt}   cmp $b->{endAt}
+            || $a->{channel} cmp $b->{channel}
+            } @out;
 
-my $t = Text::Table->new('Title','Start', 'End');
+my $t = Text::Table->new('Channel', 'Title','Start', 'End');
 $t->load( @out );
 say $t;
