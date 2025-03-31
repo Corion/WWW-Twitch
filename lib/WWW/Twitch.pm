@@ -230,8 +230,14 @@ sub stream_playback_access_token_f( $self, $channel, %options ) {
     return $res->then( sub( $res ) {
 
         if ( $res ) {
-            if( my $v = $res->[0]->{data}->{streamPlaybackAccessToken}->{value} ) {
-                return Future->done( decode_json( $v ))
+            if( 'ARRAY' eq ref $res ) {
+                if( my $t = $res->[0]->{data}->{streamPlaybackAccessToken} ) {
+                    my $v = $t->{value};
+                    return Future->done( decode_json( $v ))
+                } else {
+                    # Channel does not exist?
+                    return Future->done(undef)
+                }
             } elsif( $error = $res->{errors} ) {
                 # ...
                 return Future->fail( $error );
@@ -255,6 +261,8 @@ sub stream_playback_access_token( $self, $channel, %options ) {
 
 Internal method to fetch information about a stream on a channel
 
+Returns a hashref indicating the status and the stream id
+
 =cut
 
 sub live_stream_f( $self, $channel ) {
@@ -266,17 +274,18 @@ sub live_stream_f( $self, $channel ) {
                 "extensions" => {"persistedQuery" => {"version" => 1,"sha256Hash" => "04e46329a6786ff3a81c01c50bfa5d725902507a0deb83b0edbf7abe7a3716ea"}}},
             ])->then(sub( $res ) {
                 if( $res ) {
-                    return Future->done( $res->[0]->{data}->{user}->{stream});
+                    my $s = $res->[0]->{data}->{user}->{stream};
+                    return Future->done( { channel => $channel, status => $s ? 'live' : 'offline', stream => $s });
                 } else {
-                    return Future->done
+                    # not live?
+                    return Future->done( { channel => $channel, status => 'notfound', stream => undef });
                 }
             })
         } else {
-            return Future->done
+            # not live/does not exist?
+            return Future->done( { status => 'notfound', stream => undef });
         }
 
-    #})->on_ready(sub($s) {
-    #    say "<$channel> Live info ready";
     });
 }
 

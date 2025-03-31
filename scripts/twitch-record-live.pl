@@ -110,8 +110,13 @@ async sub get_channel_id( $channel ) {
         // $config->{channels}->{$channel}
         // do {
             my $i = await get_channel_live_info($channel);
-            ($i // {})->{id}
-           };
+            if ( $i->{status} eq 'found' ) {
+                $i->{stream}->{id}
+
+            } else {
+                $i->{status}
+            }
+        };
     return $id
 };
 
@@ -143,12 +148,8 @@ async sub currently_recording( $channel ) {
 async sub check_channel( $channel ) {
     # Check whether the channel is live
     my $info = await get_channel_live_info($channel);
-    if( $info ) {
-        my $id = $info->{id};
-        return { channel => $channel, id => $id, status => 'live' };
-    } else {
-        return { channel => $channel, id => undef, status => undef };
-    }
+    my $id = { $info->{stream} // {} }->{id};
+    return { channel => $channel, id => $id, status => $info->{status} };
 };
 
 async sub fetch_info( $channel ) {
@@ -182,12 +183,12 @@ sub check_channels( @channels ) {
 };
 
 my @channels = check_channels( @ARGV );
-my $info = map { [ $_->{channel}, $_->{status} // 'offline' ]} @channels;
+my $info = [map { [ $_->{channel}, $_->{status} ]} @channels];
 if( $output_json) {
     info( encode_json( $info ));
 } else {
     my $t = Text::Table->new("Channel", "Status");
-    $t->load(  );
+    $t->load( $info->@* );
     info( $t );
 }
 
