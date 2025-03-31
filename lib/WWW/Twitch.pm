@@ -95,12 +95,13 @@ has 'client_version' => (
     is => 'ro',
     default => '2be2ebe0-0a30-4b77-b67e-de1ee11bcf9b',
 );
-has 'ua' =>
+has 'ua' => (
     is => 'lazy',
     default => sub {
-    #Future::HTTP->new( verify_SSL => 1 ),
-    Future::HTTP->new(),
-};
+        #Future::HTTP->new( verify_SSL => 1 ),
+        Future::HTTP->new(),
+    },
+);
 
 sub fetch_gql_f( $self, $query ) {
     my $f = $self->ua->http_request( POST => 'https://gql.twitch.tv/gql',
