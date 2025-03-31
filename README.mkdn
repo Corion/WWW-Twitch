@@ -93,6 +93,8 @@ Internal method to fetch the stream playback access token
 
 Internal method to fetch information about a stream on a channel
 
+Returns a hashref indicating the status and the stream id
+
 ## `->stream_status( $channel )`
 
     my $status = $twitch->stream_status_f( 'somechannel', 'another_channel' );
@@ -101,3 +103,7 @@ Internal method to fetch information about a stream on a channel
     }
 
 Fetches the status of multiple channels
+
+# SEE ALSO
+
+[https://github.com/stefansundin/media-resolver/blob/main/src/twitch.rs](https://github.com/stefansundin/media-resolver/blob/main/src/twitch.rs)

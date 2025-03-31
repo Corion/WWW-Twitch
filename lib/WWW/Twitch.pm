@@ -334,3 +334,9 @@ sub stream_status( $self, @channels ) {
 }
 
 1;
+
+=head1 SEE ALSO
+
+L<https://github.com/stefansundin/media-resolver/blob/main/src/twitch.rs>
+
+=cut
