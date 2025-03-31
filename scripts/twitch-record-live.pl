@@ -76,7 +76,7 @@ GetOptions(
 ) or pod2usage(2);
 
 $stream_dir //= '.';
-$youtube_dl //= 'youtube-dl';
+$youtube_dl //= 'yt-dlp';
 $maximum_stale_seconds //= 15;
 $config //= 'twitch-record-live.yml';
 if( -f $config ) {
